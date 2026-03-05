@@ -6,61 +6,47 @@ export const NAV_DATA = [
     items: [
       {
         title: "Dashboard",
-        icon: Icons.HomeIcon,
-        items: [
-          {
-            title: "eCommerce",
-            url: "/",
-          },
-        ],
-      },
-      {
-        title: "Calendar",
-        url: "/calendar",
-        icon: Icons.Calendar,
+        url: "/dashboard",
+        icon: Icons.Dashboard,
         items: [],
       },
       {
-        title: "Profile",
-        url: "/profile",
+        title: "Student",
+        url: "/student",
+        icon: Icons.Student,
+        items: [],
+      },
+      {
+        title: "Attendance",
+        url: "/attendance",
+        icon: Icons.Attendance,
+        items: [],
+      },
+      {
+        title: "Class",
+        url: "/class",
+        icon: Icons.Class,
+        items: [],
+      },
+      {
+        title: "Blacklist",
+        url: "/blacklist",
+        icon: Icons.Blacklist,
+        items: [],
+      },
+      {
+        title: "User ",
+        url: "/user",
         icon: Icons.User,
         items: [],
       },
       {
-        title: "Forms",
-        icon: Icons.Alphabet,
-        items: [
-          {
-            title: "Form Elements",
-            url: "/forms/form-elements",
-          },
-          {
-            title: "Form Layout",
-            url: "/forms/form-layout",
-          },
-        ],
+        title: "Report ",
+        url: "/report",
+        icon: Icons.Reports,
+        items: [],
       },
-      {
-        title: "Tables",
-        url: "/tables",
-        icon: Icons.Table,
-        items: [
-          {
-            title: "Tables",
-            url: "/tables",
-          },
-        ],
-      },
-      {
-        title: "Pages",
-        icon: Icons.Alphabet,
-        items: [
-          {
-            title: "Settings",
-            url: "/pages/settings",
-          },
-        ],
-      },
+      
     ],
   },
   {
