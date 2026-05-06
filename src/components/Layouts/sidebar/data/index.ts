@@ -1,6 +1,18 @@
 import * as Icons from "../icons";
 
-export const NAV_DATA = [
+export interface NavItem {
+  title: string;
+  url?: string;
+  icon?: any;
+  items: { title: string; url: string }[];
+}
+
+export interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+export const NAV_DATA: NavSection[] = [
   {
     label: "MAIN MENU",
     items: [
@@ -35,57 +47,23 @@ export const NAV_DATA = [
         items: [],
       },
       {
-        title: "User ",
+        title: "Users",
         url: "/user",
         icon: Icons.User,
         items: [],
       },
       {
-        title: "Report ",
+        title: "Reports",
         url: "/report",
         icon: Icons.Reports,
         items: [],
       },
-      
-    ],
-  },
-  {
-    label: "OTHERS",
-    items: [
       {
-        title: "Charts",
-        icon: Icons.PieChart,
-        items: [
-          {
-            title: "Basic Chart",
-            url: "/charts/basic-chart",
-          },
-        ],
-      },
-      {
-        title: "UI Elements",
-        icon: Icons.FourCircle,
-        items: [
-          {
-            title: "Alerts",
-            url: "/ui-elements/alerts",
-          },
-          {
-            title: "Buttons",
-            url: "/ui-elements/buttons",
-          },
-        ],
-      },
-      {
-        title: "Authentication",
-        icon: Icons.Authentication,
-        items: [
-          {
-            title: "Sign In",
-            url: "/auth/sign-in",
-          },
-        ],
+        title: "Subjects",
+        url: "/subject",
+        icon: Icons.Class,
+        items: [],
       },
     ],
-  },
+  }
 ];
