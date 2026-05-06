@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { SubjectContent } from "./_components/subject-content";
+
+import { SubjectContent } from "@/components/subject/subject-content";
 
 export const metadata = {
   title: "Subjects",
@@ -8,8 +8,9 @@ export const metadata = {
 export default function SubjectPage() {
   return (
     <>
-      <Breadcrumb pageName="Subjects" />
+      
       <SubjectContent />
     </>
   );
 }
+ 

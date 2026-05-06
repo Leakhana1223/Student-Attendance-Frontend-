@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("token", response.token);
+      localStorage.setItem("refreshToken", response.refreshToken);
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
   };
 
   return (

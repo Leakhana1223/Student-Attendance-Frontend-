@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { ReportContent } from "./_components/report-content";
+
+import { ReportContent } from "@/components/report/report-content";
 
 export const metadata = {
   title: "Reports",
@@ -8,8 +8,9 @@ export const metadata = {
 export default function ReportPage() {
   return (
     <>
-      <Breadcrumb pageName="Reports" />
+      
       <ReportContent />
     </>
   );
 }
+ 

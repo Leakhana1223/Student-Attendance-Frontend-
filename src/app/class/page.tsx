@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { ClassContent } from "./_components/class-content";
+
+import { ClassContent } from "@/components/class/class-content";
 
 export const metadata = {
   title: "Classes",
@@ -8,8 +8,9 @@ export const metadata = {
 export default function ClassPage() {
   return (
     <>
-      <Breadcrumb pageName="Classes" />
+      
       <ClassContent />
     </>
   );
 }
+ 

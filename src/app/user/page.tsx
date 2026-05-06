@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { UserContent } from "./_components/user-content";
+
+import { UserContent } from "@/components/user/user-content";
 
 export const metadata = {
   title: "Users",
@@ -8,8 +8,9 @@ export const metadata = {
 export default function UserPage() {
   return (
     <>
-      <Breadcrumb pageName="Users" />
+      
       <UserContent />
     </>
   );
 }
+ 

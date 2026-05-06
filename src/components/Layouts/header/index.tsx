@@ -35,13 +35,6 @@ export function Header() {
         </Link>
       )}
 
-      <div className="max-xl:hidden">
-        <h1 className="mb-0.5 text-heading-5 font-bold text-dark dark:text-white">
-          Dashboard
-        </h1>
-        <p className="font-medium capitalize">{user?.role || "Admin"} Role</p>
-      </div>
-
       <div className="relative flex flex-1 items-center justify-end gap-2 min-[375px]:gap-4">
         <div className="relative w-full max-w-[300px] mx-auto">
           <input

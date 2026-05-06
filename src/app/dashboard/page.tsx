@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { DashboardContent } from "./_components/dashboard-content";
+
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
 export const metadata = {
   title: "Dashboard",
@@ -7,9 +7,9 @@ export const metadata = {
 
 export default function DashboardPage() {
   return (
-    <>
-      <Breadcrumb pageName="Dashboard" />
+    <>   
       <DashboardContent />
     </>
   );
 }
+ 

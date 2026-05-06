@@ -1,5 +1,5 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { BlacklistContent } from "./_components/blacklist-content";
+
+import { BlacklistContent } from "@/components/blacklist/blacklist-content";
 
 export const metadata = {
   title: "Blacklist",
@@ -8,8 +8,8 @@ export const metadata = {
 export default function BlacklistPage() {
   return (
     <>
-      <Breadcrumb pageName="Blacklist" />
       <BlacklistContent />
     </>
   );
 }
+ 
