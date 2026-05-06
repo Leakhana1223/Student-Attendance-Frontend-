@@ -1,10 +1,10 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { attendanceStorage, classStorage, studentStorage } from "@/lib/storage";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, BookOpen, ClipboardList, FileText, UserCheck, Trash2 } from "lucide-react";
+import { useGetDashboardStatsQuery } from "@/redux/features/dashboard/dashboardApi";
 
 interface StatCard {
   title: string;
@@ -16,44 +16,43 @@ interface StatCard {
 
 export function DashboardContent() {
   const { user } = useAuth();
+  const { data: dashboardStats, isLoading } = useGetDashboardStatsQuery();
   const [stats, setStats] = useState<StatCard[]>([]);
 
   useEffect(() => {
-    const students = studentStorage.getAll();
-    const classes = classStorage.getAll();
-    const attendance = attendanceStorage.getAll();
-
-    setStats([
-      {
-        title: "Total Students",
-        value: students.length,
-        icon: <Users className="h-8 w-8" />,
-        color: "bg-blue-50 dark:bg-blue-900/20",
-        href: "/student",
-      },
-      {
-        title: "Total Classes",
-        value: classes.length,
-        icon: <BookOpen className="h-8 w-8" />,
-        color: "bg-green-50 dark:bg-green-900/20",
-        href: "/class",
-      },
-      {
-        title: "Total Records",
-        value: attendance.length,
-        icon: <ClipboardList className="h-8 w-8" />,
-        color: "bg-yellow-50 dark:bg-yellow-900/20",
-        href: "/attendance",
-      },
-      {
-        title: "Reports",
-        value: classes.length > 0 ? attendance.length : 0,
-        icon: <FileText className="h-8 w-8" />,
-        color: "bg-purple-50 dark:bg-purple-900/20",
-        href: "/report",
-      },
-    ]);
-  }, []);
+    if (dashboardStats) {
+      setStats([
+        {
+          title: "Total Students",
+          value: dashboardStats.totalStudents,
+          icon: <Users className="h-8 w-8" />,
+          color: "bg-blue-50 dark:bg-blue-900/20",
+          href: "/student",
+        },
+        {
+          title: "Total Classes",
+          value: dashboardStats.totalClasses,
+          icon: <BookOpen className="h-8 w-8" />,
+          color: "bg-green-50 dark:bg-green-900/20",
+          href: "/class",
+        },
+        {
+          title: "Total Records",
+          value: dashboardStats.totalAttendance,
+          icon: <ClipboardList className="h-8 w-8" />,
+          color: "bg-yellow-50 dark:bg-yellow-900/20",
+          href: "/attendance",
+        },
+        {
+          title: "Reports",
+          value: dashboardStats.totalAttendance,
+          icon: <FileText className="h-8 w-8" />,
+          color: "bg-purple-50 dark:bg-purple-900/20",
+          href: "/report",
+        },
+      ]);
+    }
+  }, [dashboardStats]);
 
   const menuItems = [
     {
@@ -93,6 +92,10 @@ export function DashboardContent() {
     },
   ];
 
+  if (isLoading) {
+    return <div>Loading dashboard stats...</div>;
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -112,16 +115,18 @@ export function DashboardContent() {
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.href}>
             <div className="rounded-[10px] bg-white shadow-1 transition hover:shadow-2 dark:bg-gray-dark dark:shadow-card">
-              <div className={`rounded-[10px] p-4 ${stat.color}`}>
-                {stat.icon}
-              </div>
-              <div className="px-4 py-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {stat.title}
-                </p>
-                <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                  {stat.value}
-                </p>
+              <div className="flex items-center p-4">
+                  <div className={`rounded-[10px] p-4 ${stat.color}`}>
+                    {stat.icon}
+                  </div>
+                  <div className="px-4">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {stat.title}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                      {stat.value}
+                    </p>
+                  </div>
               </div>
             </div>
           </Link>

@@ -1,18 +1,19 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useLoginMutation } from "@/redux/features/auth/authApi";
 
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "teacher";
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, name: string) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -22,11 +23,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loginMutation] = useLoginMutation();
 
   // Initialize user from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
+    const token = localStorage.getItem("token");
+    if (savedUser && token) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (error) {
@@ -36,21 +39,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (email: string, password: string, name: string) => {
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      email,
-      name: name || email.split("@")[0],
-      role: "teacher",
-    };
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await loginMutation({ email, password }).unwrap();
+      const userData: User = {
+        id: response.id.toString(),
+        email: response.email,
+        name: response.username,
+        role: response.roles[0]?.replace('ROLE_', '').toLowerCase() || 'user',
+      };
 
-    setUser(newUser);
-    localStorage.setItem("user", JSON.stringify(newUser));
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("token", response.token);
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   return (

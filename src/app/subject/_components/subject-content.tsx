@@ -2,13 +2,21 @@
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import { subjectStorage, classStorage, Subject } from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { 
+  useGetSubjectsQuery, 
+  useAddSubjectMutation, 
+  useDeleteSubjectMutation 
+} from "@/redux/features/subject/subjectApi";
+import { useGetClassesQuery } from "@/redux/features/class/classApi";
 
 export function SubjectContent() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  const { data: subjects = [], isLoading: isSubjectsLoading } = useGetSubjectsQuery();
+  const { data: classes = [], isLoading: isClassesLoading } = useGetClassesQuery();
+  const [addSubject] = useAddSubjectMutation();
+  const [deleteSubject] = useDeleteSubjectMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -17,16 +25,7 @@ export function SubjectContent() {
     credits: "3",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setSubjects(subjectStorage.getAll());
-    setClasses(classStorage.getAll());
-  };
-
-  const handleAddSubject = (e: React.FormEvent) => {
+  const handleAddSubject = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.code || !formData.classId) {
@@ -34,34 +33,41 @@ export function SubjectContent() {
       return;
     }
 
-    subjectStorage.add({
-      name: formData.name,
-      code: formData.code,
-      classId: formData.classId,
-      credits: formData.credits ? parseInt(formData.credits) : undefined,
-    });
+    try {
+      await addSubject({
+        subjectName: formData.name,
+        code: formData.code,
+        classId: formData.classId,
+        credits: formData.credits ? parseInt(formData.credits) : 3,
+      }).unwrap();
 
-    setFormData({
-      name: "",
-      code: "",
-      classId: "",
-      credits: "3",
-    });
-    setIsModalOpen(false);
-    loadData();
-  };
-
-  const handleDelete = (subject: Subject) => {
-    if (confirm(`Delete ${subject.name}?`)) {
-      subjectStorage.delete(subject.id);
-      loadData();
+      setFormData({
+        name: "",
+        code: "",
+        classId: "",
+        credits: "3",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add subject:", error);
+      alert("Failed to add subject");
     }
   };
 
-  const getClassName = (classId: string) => {
-    const cls = classes.find((c) => c.id === classId);
-    return cls ? cls.name : "N/A";
+  const handleDelete = async (subject: any) => {
+    if (confirm(`Delete ${subject.subjectName}?`)) {
+      try {
+        await deleteSubject(subject.id).unwrap();
+      } catch (error) {
+        console.error("Failed to delete subject:", error);
+        alert("Failed to delete subject");
+      }
+    }
   };
+
+  if (isSubjectsLoading || isClassesLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -125,9 +131,9 @@ export function SubjectContent() {
               required
             >
               <option value="">Select a class</option>
-              {classes.map((cls) => (
+              {classes.map((cls: any) => (
                 <option key={cls.id} value={cls.id}>
-                  {cls.name}
+                  {cls.className}
                 </option>
               ))}
             </select>
@@ -172,15 +178,14 @@ export function SubjectContent() {
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<Subject>
+          <DataTable<any>
             data={subjects}
             columns={[
-              { key: "name", label: "Subject Name" },
+              { key: "subjectName", label: "Subject Name" },
               { key: "code", label: "Code" },
               {
-                key: "classId",
+                key: "className",
                 label: "Class",
-                render: (classId) => getClassName(classId as string),
               },
               {
                 key: "credits",

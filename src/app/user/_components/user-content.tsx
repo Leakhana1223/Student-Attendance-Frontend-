@@ -2,32 +2,30 @@
 
 import { useAuth } from "@/context/auth-context";
 import { DataTable } from "@/components/DataTable";
-import { userStorage, UserRecord } from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/Modal";
+import { 
+  useGetUsersQuery, 
+  useAddUserMutation, 
+  useDeleteUserMutation 
+} from "@/redux/features/user/userApi";
 
 export function UserContent() {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState<UserRecord[]>([]);
+  const { data: users = [], isLoading } = useGetUsersQuery();
+  const [addUser] = useAddUserMutation();
+  const [deleteUser] = useDeleteUserMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     name: "",
-    role: "teacher",
+    role: "TEACHER",
     password: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const allUsers = userStorage.getAll();
-    setUsers(allUsers);
-  };
-
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.name || !formData.password) {
@@ -35,29 +33,43 @@ export function UserContent() {
       return;
     }
 
-    userStorage.add({
-      email: formData.email,
-      name: formData.name,
-      role: formData.role,
-      password: formData.password,
-    });
+    try {
+      await addUser({
+        email: formData.email,
+        name: formData.name,
+        role: formData.role.toUpperCase(),
+        password: formData.password,
+        phoneNumber: "",
+        gender: "MALE", // Default
+      }).unwrap();
 
-    setFormData({
-      email: "",
-      name: "",
-      role: "teacher",
-      password: "",
-    });
-    setIsModalOpen(false);
-    loadData();
-  };
-
-  const handleDelete = (userRecord: UserRecord) => {
-    if (confirm(`Delete ${userRecord.name}?`)) {
-      userStorage.delete(userRecord.id);
-      loadData();
+      setFormData({
+        email: "",
+        name: "",
+        role: "TEACHER",
+        password: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add user:", error);
+      alert("Failed to add user");
     }
   };
+
+  const handleDelete = async (userRecord: any) => {
+    if (confirm(`Delete ${userRecord.name}?`)) {
+      try {
+        await deleteUser(userRecord.id).unwrap();
+      } catch (error) {
+        console.error("Failed to delete user:", error);
+        alert("Failed to delete user");
+      }
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading users...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -168,8 +180,8 @@ export function UserContent() {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
+              <option value="TEACHER">Teacher</option>
+              <option value="ADMIN">Admin</option>
             </select>
           </div>
 
@@ -199,16 +211,15 @@ export function UserContent() {
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<UserRecord>
+          <DataTable<any>
             data={users}
             columns={[
               { key: "name", label: "Name" },
               { key: "email", label: "Email" },
               { key: "role", label: "Role" },
               {
-                key: "createdAt",
-                label: "Created At",
-                render: (date) => new Date(date as string).toLocaleDateString(),
+                key: "id", // Using ID since backend might not have createdAt easily available without audit fields
+                label: "ID",
               },
             ]}
             onDelete={handleDelete}

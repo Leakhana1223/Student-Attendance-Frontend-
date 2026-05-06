@@ -2,29 +2,28 @@
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import { blacklistStorage, studentStorage, BlacklistEntry, Student } from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { 
+  useGetBlacklistQuery, 
+  useAddToBlacklistMutation, 
+  useRemoveFromBlacklistMutation 
+} from "@/redux/features/blacklist/blacklistApi";
+import { useGetStudentsQuery } from "@/redux/features/student/studentApi";
 
 export function BlacklistContent() {
-  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const { data: blacklist = [], isLoading: isBlacklistLoading } = useGetBlacklistQuery();
+  const { data: students = [], isLoading: isStudentsLoading } = useGetStudentsQuery();
+  const [addToBlacklist] = useAddToBlacklistMutation();
+  const [removeFromBlacklist] = useRemoveFromBlacklistMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     studentId: "",
     reason: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setBlacklist(blacklistStorage.getAll());
-    setStudents(studentStorage.getAll());
-  };
-
-  const handleAddEntry = (e: React.FormEvent) => {
+  const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.studentId || !formData.reason) {
@@ -32,44 +31,42 @@ export function BlacklistContent() {
       return;
     }
 
-    // Check if already blacklisted
-    if (blacklistStorage.isBlacklisted(formData.studentId)) {
-      alert("This student is already in the blacklist");
-      return;
+    try {
+      await addToBlacklist({
+        studentId: formData.studentId,
+        reason: formData.reason,
+      }).unwrap();
+
+      setFormData({
+        studentId: "",
+        reason: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add to blacklist:", error);
+      alert("Failed to add to blacklist");
     }
-
-    blacklistStorage.add({
-      studentId: formData.studentId,
-      reason: formData.reason,
-      addedDate: new Date().toISOString().split("T")[0],
-    });
-
-    setFormData({
-      studentId: "",
-      reason: "",
-    });
-    setIsModalOpen(false);
-    loadData();
   };
 
-  const handleDelete = (entry: BlacklistEntry) => {
+  const handleDelete = async (entry: any) => {
     if (confirm("Remove from blacklist?")) {
-      blacklistStorage.delete(entry.id);
-      loadData();
+      try {
+        await removeFromBlacklist(entry.id).unwrap();
+      } catch (error) {
+        console.error("Failed to remove from blacklist:", error);
+        alert("Failed to remove from blacklist");
+      }
     }
-  };
-
-  const getStudentName = (studentId: string) => {
-    const student = students.find((s) => s.id === studentId);
-    return student
-      ? `${student.name} (${student.rollNumber})`
-      : "Unknown Student";
   };
 
   // Get students not in blacklist
   const availableStudents = students.filter(
-    (s) => !blacklist.some((b) => b.studentId === s.id)
+    (s: any) => !blacklist.some((b: any) => b.studentId.toString() === s.id.toString())
   );
+
+  if (isBlacklistLoading || isStudentsLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +116,7 @@ export function BlacklistContent() {
               required
             >
               <option value="">Select a student</option>
-              {availableStudents.map((student) => (
+              {availableStudents.map((student: any) => (
                 <option key={student.id} value={student.id}>
                   {student.name} ({student.rollNumber})
                 </option>
@@ -167,19 +164,18 @@ export function BlacklistContent() {
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<BlacklistEntry>
+          <DataTable<any>
             data={blacklist}
             columns={[
               {
-                key: "studentId",
+                key: "studentName",
                 label: "Student",
-                render: (studentId) => getStudentName(studentId as string),
               },
               { key: "reason", label: "Reason" },
               {
                 key: "addedDate",
                 label: "Added Date",
-                render: (date) => new Date(date as string).toLocaleDateString(),
+                render: (date) => date ? new Date(date as string).toLocaleDateString() : "N/A",
               },
             ]}
             onDelete={handleDelete}

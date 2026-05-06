@@ -1,6 +1,6 @@
 import { PeriodPicker } from "@/components/period-picker";
 import { cn } from "@/lib/utils";
-import { getWeeksProfitData } from "@/services/charts.services";
+import { getWeeksProfitData } from "@/redux/services/charts.services";
 import { WeeksProfitChart } from "./chart";
 
 type PropsType = {

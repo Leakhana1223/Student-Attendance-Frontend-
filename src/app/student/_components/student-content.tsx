@@ -2,13 +2,21 @@
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import { classStorage, studentStorage, Student } from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { 
+  useGetStudentsQuery, 
+  useAddStudentMutation, 
+  useDeleteStudentMutation 
+} from "@/redux/features/student/studentApi";
+import { useGetClassesQuery } from "@/redux/features/class/classApi";
 
 export function StudentContent() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  const { data: students = [], isLoading: isStudentsLoading } = useGetStudentsQuery();
+  const { data: classes = [], isLoading: isClassesLoading } = useGetClassesQuery();
+  const [addStudent] = useAddStudentMutation();
+  const [deleteStudent] = useDeleteStudentMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -19,16 +27,7 @@ export function StudentContent() {
     address: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setStudents(studentStorage.getAll());
-    setClasses(classStorage.getAll());
-  };
-
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.rollNumber || !formData.classId) {
@@ -36,38 +35,55 @@ export function StudentContent() {
       return;
     }
 
-    studentStorage.add({
-      name: formData.name,
-      email: formData.email,
-      rollNumber: formData.rollNumber,
-      classId: formData.classId,
-      dateOfBirth: formData.dateOfBirth,
-      address: formData.address,
-    });
+    try {
+      await addStudent({
+        name: formData.name,
+        email: formData.email,
+        rollNumber: formData.rollNumber,
+        classId: formData.classId,
+        dateOfBirth: formData.dateOfBirth,
+        address: formData.address,
+        password: "Student@123", // Default password
+        gender: "MALE", // Default gender, should ideally be in form
+        phoneNumber: "",
+      }).unwrap();
 
-    setFormData({
-      name: "",
-      email: "",
-      rollNumber: "",
-      classId: "",
-      dateOfBirth: new Date().toISOString().split("T")[0],
-      address: "",
-    });
-    setIsModalOpen(false);
-    loadData();
+      setFormData({
+        name: "",
+        email: "",
+        rollNumber: "",
+        classId: "",
+        dateOfBirth: new Date().toISOString().split("T")[0],
+        address: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add student:", error);
+      alert("Failed to add student");
+    }
   };
 
-  const handleDelete = (student: Student) => {
+  const handleDelete = async (student: any) => {
     if (confirm(`Delete ${student.name}?`)) {
-      studentStorage.delete(student.id);
-      loadData();
+      try {
+        await deleteStudent(student.id).unwrap();
+      } catch (error) {
+        console.error("Failed to delete student:", error);
+        alert("Failed to delete student");
+      }
     }
   };
 
   const getClassName = (classId: string) => {
-    const cls = classes.find((c) => c.id === classId);
-    return cls ? cls.name : "N/A";
+    // In the new API, we might need a different way to get class name
+    // But for now, if students data doesn't include class name, we look it up
+    const cls = classes.find((c) => c.id.toString() === classId?.toString());
+    return cls ? cls.className : "N/A";
   };
+
+  if (isStudentsLoading || isClassesLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +163,7 @@ export function StudentContent() {
               <option value="">Select a class</option>
               {classes.map((cls) => (
                 <option key={cls.id} value={cls.id}>
-                  {cls.name}
+                  {cls.className}
                 </option>
               ))}
             </select>
@@ -206,7 +222,7 @@ export function StudentContent() {
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<Student>
+          <DataTable<any>
             data={students}
             columns={[
               { key: "name", label: "Name" },
@@ -215,12 +231,17 @@ export function StudentContent() {
               {
                 key: "classId",
                 label: "Class",
-                render: (classId) => getClassName(classId as string),
+                render: (_, item) => {
+                    // This is a bit tricky because the backend might not return classId directly in UserResponse
+                    // We might need to fetch enrollments or have the backend include it.
+                    // For now, let's assume we can't show it easily without extra API call or join.
+                    return "View Enrollment"; 
+                },
               },
               {
                 key: "dateOfBirth",
                 label: "Date of Birth",
-                render: (date) => new Date(date as string).toLocaleDateString(),
+                render: (date) => date ? new Date(date as string).toLocaleDateString() : "N/A",
               },
               { key: "address", label: "Address" },
             ]}

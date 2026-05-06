@@ -2,25 +2,36 @@
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import {
-  attendanceStorage,
-  blacklistStorage,
-  studentStorage,
-  classStorage,
-  Attendance,
-  Student,
-  Class,
-} from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { 
+  useGetAttendanceQuery, 
+  useGetAttendanceByFilterQuery, 
+  useRecordAttendanceMutation, 
+  useDeleteAttendanceMutation 
+} from "@/redux/features/attendance/attendanceApi";
+import { useGetStudentsQuery } from "@/redux/features/student/studentApi";
+import { useGetClassesQuery } from "@/redux/features/class/classApi";
+import { useAuth } from "@/context/auth-context";
 
 export function AttendanceContent() {
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user } = useAuth();
   const [filterClassId, setFilterClassId] = useState("");
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
+
+  const { data: allAttendance = [], isLoading: isAttendanceLoading } = useGetAttendanceQuery();
+  const { data: filteredAttendance = [], isLoading: isFilteredLoading } = useGetAttendanceByFilterQuery(
+    { classId: filterClassId, date: filterDate },
+    { skip: !filterClassId || !filterDate }
+  );
+
+  const { data: students = [], isLoading: isStudentsLoading } = useGetStudentsQuery();
+  const { data: classes = [], isLoading: isClassesLoading } = useGetClassesQuery();
+  
+  const [recordAttendance] = useRecordAttendanceMutation();
+  const [deleteAttendance] = useDeleteAttendanceMutation();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{
     studentId: string;
     classId: string;
@@ -37,57 +48,7 @@ export function AttendanceContent() {
     remark: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const attendanceData = attendanceStorage.getAll();
-    setAttendance(attendanceData);
-    setStudents(studentStorage.getAll());
-    setClasses(classStorage.getAll());
-    autoBlacklistExistingStudents(attendanceData);
-  };
-
-  const getNonPresentCountInLastMonths = (
-    studentId: string,
-    months = 3,
-  ) => {
-    const cutoffDate = new Date();
-    cutoffDate.setMonth(cutoffDate.getMonth() - months);
-
-    return attendanceStorage
-      .getAll()
-      .filter((record) => record.studentId === studentId)
-      .filter((record) => {
-        const recordDate = new Date(record.date);
-        return recordDate >= cutoffDate && record.status !== "present";
-      }).length;
-  };
-
-  const checkAndBlacklistStudent = (studentId: string, notify = true) => {
-    const nonPresentCount = getNonPresentCountInLastMonths(studentId, 3);
-    if (nonPresentCount >= 17 && !blacklistStorage.isBlacklisted(studentId)) {
-      blacklistStorage.add({
-        studentId,
-        reason:
-          "17 non-present attendance records (absent / late / excused) in the last 3 months",
-        addedDate: new Date().toISOString().split("T")[0],
-      });
-      if (notify) {
-        alert(
-          "Student automatically added to blacklist: 17 non-present records in the last 3 months.",
-        );
-      }
-    }
-  };
-
-  const autoBlacklistExistingStudents = (attendanceData: Attendance[]) => {
-    const studentIds = Array.from(new Set(attendanceData.map((record) => record.studentId)));
-    studentIds.forEach((studentId) => checkAndBlacklistStudent(studentId, false));
-  };
-
-  const handleAddAttendance = (e: React.FormEvent) => {
+  const handleRecordAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.studentId || !formData.classId || !formData.date) {
@@ -95,59 +56,58 @@ export function AttendanceContent() {
       return;
     }
 
-    attendanceStorage.add({
-      studentId: formData.studentId,
-      classId: formData.classId,
-      date: formData.date,
-      session: formData.session,
-      status: formData.status,
-      remark: formData.remark,
-    });
+    try {
+      await recordAttendance({
+        studentId: formData.studentId,
+        classId: formData.classId,
+        date: formData.date,
+        timeSlot: formData.session.toUpperCase(),
+        status: formData.status.toUpperCase(),
+        recordedById: user?.id,
+        remark: formData.remark,
+      }).unwrap();
 
-    checkAndBlacklistStudent(formData.studentId);
-
-    setFormData({
-      studentId: "",
-      classId: "",
-      date: new Date().toISOString().split("T")[0],
-      session: "morning",
-      status: "present",
-      remark: "",
-    });
-    setIsModalOpen(false);
-    loadData();
-  };
-
-  const handleDelete = (record: Attendance) => {
-    if (confirm("Delete this attendance record?")) {
-      attendanceStorage.delete(record.id);
-      loadData();
+      setFormData({
+        studentId: "",
+        classId: "",
+        date: new Date().toISOString().split("T")[0],
+        session: "morning",
+        status: "present",
+        remark: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to record attendance:", error);
+      alert("Failed to record attendance");
     }
   };
 
-  const getStudentName = (studentId: string) => {
-    return students.find((s) => s.id === studentId)?.name || "N/A";
-  };
-
-  const getClassName = (classId: string) => {
-    return classes.find((c) => c.id === classId)?.name || "N/A";
+  const handleDelete = async (record: any) => {
+    if (confirm("Delete this attendance record?")) {
+      try {
+        await deleteAttendance(record.id).unwrap();
+      } catch (error) {
+        console.error("Failed to delete attendance:", error);
+        alert("Failed to delete attendance");
+      }
+    }
   };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      present: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
-      absent: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
-      late: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
-      excused: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
+      PRESENT: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+      ABSENT: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
+      LATE: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
+      EXCUSED: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
     };
-    return colors[status] || colors.present;
+    return colors[status?.toUpperCase()] || colors.PRESENT;
   };
 
-  const filteredAttendance = attendance.filter((record) => {
-    if (filterClassId && record.classId !== filterClassId) return false;
-    if (filterDate && record.date !== filterDate) return false;
-    return true;
-  });
+  const displayData = filterClassId && filterDate ? filteredAttendance : allAttendance;
+
+  if (isAttendanceLoading || isStudentsLoading || isClassesLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -165,13 +125,13 @@ export function AttendanceContent() {
         </button>
       </div>
 
-      {/* Add Attendance Modal */}
+      {/* Mark Attendance Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Mark Attendance"
       >
-        <form onSubmit={handleAddAttendance} className="space-y-4">
+        <form onSubmit={handleRecordAttendance} className="space-y-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
               Class
@@ -183,9 +143,9 @@ export function AttendanceContent() {
               required
             >
               <option value="">Select a class</option>
-              {classes.map((cls) => (
+              {classes.map((cls: any) => (
                 <option key={cls.id} value={cls.id}>
-                  {cls.name}
+                  {cls.className}
                 </option>
               ))}
             </select>
@@ -202,7 +162,7 @@ export function AttendanceContent() {
               required
             >
               <option value="">Select a student</option>
-              {students.map((student) => (
+              {students.map((student: any) => (
                 <option key={student.id} value={student.id}>
                   {student.name} ({student.rollNumber})
                 </option>
@@ -230,14 +190,7 @@ export function AttendanceContent() {
               </label>
               <select
                 value={formData.session}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const newSession: "morning" | "afternoon" = value === "afternoon" ? "afternoon" : "morning";
-                  setFormData({
-                    ...formData,
-                    session: newSession,
-                  });
-                }}
+                onChange={(e) => setFormData({ ...formData, session: e.target.value as any })}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               >
                 <option value="morning">Morning</option>
@@ -251,19 +204,7 @@ export function AttendanceContent() {
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const validStatuses: Record<string, "present" | "absent" | "late" | "excused"> = {
-                    "present": "present",
-                    "absent": "absent",
-                    "late": "late",
-                    "excused": "excused"
-                  };
-                  setFormData({
-                    ...formData,
-                    status: validStatuses[value] || "present",
-                  })
-                }}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               >
                 <option value="present">Present</option>
@@ -317,9 +258,9 @@ export function AttendanceContent() {
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           >
             <option value="">All Classes</option>
-            {classes.map((cls) => (
+            {classes.map((cls: any) => (
               <option key={cls.id} value={cls.id}>
-                {cls.name}
+                {cls.className}
               </option>
             ))}
           </select>
@@ -342,32 +283,30 @@ export function AttendanceContent() {
       <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
         <div className="border-b border-gray-200 px-4 py-6 dark:border-gray-700 sm:px-6">
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            Attendance Records ({filteredAttendance.length})
+            Attendance Records ({displayData.length})
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<Attendance>
-            data={filteredAttendance}
+          <DataTable<any>
+            data={displayData}
             columns={[
               {
-                key: "studentId",
+                key: "studentName",
                 label: "Student",
-                render: (studentId) => getStudentName(studentId as string),
               },
               {
-                key: "classId",
+                key: "className",
                 label: "Class",
-                render: (classId) => getClassName(classId as string),
               },
               {
-                key: "date",
+                key: "sessionDate",
                 label: "Date",
-                render: (date) => new Date(date as string).toLocaleDateString(),
+                render: (date) => date ? new Date(date as string).toLocaleDateString() : "N/A",
               },
               {
-                key: "session",
+                key: "sessionTimeSlot",
                 label: "Session",
-                render: (session) => (session as string).charAt(0).toUpperCase() + (session as string).slice(1),
+                render: (session) => session ? (session as string).charAt(0).toUpperCase() + (session as string).slice(1).toLowerCase() : "N/A",
               },
               {
                 key: "status",
@@ -376,7 +315,7 @@ export function AttendanceContent() {
                   <span
                     className={`inline-block rounded px-2.5 py-1 text-xs font-medium ${getStatusColor(status as string)}`}
                   >
-                    {(status as string).charAt(0).toUpperCase() + (status as string).slice(1)}
+                    {(status as string).charAt(0).toUpperCase() + (status as string).slice(1).toLowerCase()}
                   </span>
                 ),
               },

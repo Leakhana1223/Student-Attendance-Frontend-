@@ -11,8 +11,8 @@ export default function SigninWithPassword() {
   const router = useRouter();
   const { login } = useAuth();
   const [data, setData] = useState({
-    email: "Leakhana",
-    password: "Leak@123",
+    email: "admin@example.com",
+    password: "admin123",
     remember: false,
   });
 
@@ -26,7 +26,7 @@ export default function SigninWithPassword() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -38,19 +38,15 @@ export default function SigninWithPassword() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      try {
-        // Simple authentication - any email/password combination works
-        // In production, you'd validate against a backend
-        login(data.email, data.password, data.email.split("@")[0]);
-        
-        // Redirect to dashboard
-        router.push("/dashboard");
-      } catch (err) {
-        setError("Login failed. Please try again.");
-        setLoading(false);
-      }
-    }, 500);
+    try {
+      await login(data.email, data.password);
+      // Redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err?.data?.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

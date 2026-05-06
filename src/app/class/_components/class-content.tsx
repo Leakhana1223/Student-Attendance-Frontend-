@@ -2,12 +2,19 @@
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import { classStorage, Class } from "@/lib/storage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { 
+  useGetClassesQuery, 
+  useAddClassMutation, 
+  useDeleteClassMutation 
+} from "@/redux/features/class/classApi";
 
 export function ClassContent() {
-  const [classes, setClasses] = useState<Class[]>([]);
+  const { data: classes = [], isLoading } = useGetClassesQuery();
+  const [addClass] = useAddClassMutation();
+  const [deleteClass] = useDeleteClassMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -16,15 +23,7 @@ export function ClassContent() {
     description: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setClasses(classStorage.getAll());
-  };
-
-  const handleAddClass = (e: React.FormEvent) => {
+  const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.code || !formData.section) {
@@ -32,29 +31,42 @@ export function ClassContent() {
       return;
     }
 
-    classStorage.add({
-      name: formData.name,
-      code: formData.code,
-      section: formData.section,
-      description: formData.description,
-    });
+    try {
+      await addClass({
+        className: formData.name,
+        code: formData.code,
+        section: formData.section,
+        description: formData.description,
+        year: new Date().getFullYear(),
+      }).unwrap();
 
-    setFormData({
-      name: "",
-      code: "",
-      section: "",
-      description: "",
-    });
-    setIsModalOpen(false);
-    loadData();
-  };
-
-  const handleDelete = (classItem: Class) => {
-    if (confirm(`Delete ${classItem.name}?`)) {
-      classStorage.delete(classItem.id);
-      loadData();
+      setFormData({
+        name: "",
+        code: "",
+        section: "",
+        description: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add class:", error);
+      alert("Failed to add class");
     }
   };
+
+  const handleDelete = async (classItem: any) => {
+    if (confirm(`Delete ${classItem.className}?`)) {
+      try {
+        await deleteClass(classItem.id).unwrap();
+      } catch (error) {
+        console.error("Failed to delete class:", error);
+        alert("Failed to delete class");
+      }
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -160,10 +172,10 @@ export function ClassContent() {
           </h3>
         </div>
         <div className="p-4 sm:p-6">
-          <DataTable<Class>
+          <DataTable<any>
             data={classes}
             columns={[
-              { key: "name", label: "Class Name" },
+              { key: "className", label: "Class Name" },
               { key: "code", label: "Code" },
               { key: "section", label: "Section" },
               { key: "description", label: "Description" },

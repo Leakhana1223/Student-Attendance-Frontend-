@@ -1,13 +1,10 @@
 "use client";
 
-import {
-  attendanceStorage,
-  studentStorage,
-  classStorage,
-  Student,
-} from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { Download, Printer } from "lucide-react";
+import { useGetStudentsQuery } from "@/redux/features/student/studentApi";
+import { useGetAttendanceQuery } from "@/redux/features/attendance/attendanceApi";
+import { useGetClassesQuery } from "@/redux/features/class/classApi";
 
 interface ReportData {
   studentName: string;
@@ -22,75 +19,72 @@ interface ReportData {
 }
 
 export function ReportContent() {
+  const { data: students = [], isLoading: isStudentsLoading } = useGetStudentsQuery();
+  const { data: attendance = [], isLoading: isAttendanceLoading } = useGetAttendanceQuery();
+  const { data: classes = [], isLoading: isClassesLoading } = useGetClassesQuery();
+
   const [reports, setReports] = useState<ReportData[]>([]);
   const [filterClassId, setFilterClassId] = useState("");
-  const [classes, setClasses] = useState<any[]>([]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (students.length > 0 && attendance.length > 0 && classes.length > 0) {
+        const reportData = students.map((student: any) => {
+          const studentAttendance = attendance.filter(
+            (a: any) => a.studentId === student.id
+          );
 
-  const loadData = () => {
-    const students = studentStorage.getAll();
-    const attendance = attendanceStorage.getAll();
-    const classesData = classStorage.getAll();
-    setClasses(classesData);
+          const counts = {
+            total: studentAttendance.length,
+            present: studentAttendance.filter((a: any) => a.status === "PRESENT").length,
+            absent: studentAttendance.filter((a: any) => a.status === "ABSENT").length,
+            late: studentAttendance.filter((a: any) => a.status === "LATE").length,
+            excused: studentAttendance.filter((a: any) => a.status === "EXCUSED").length,
+          };
 
-    const reportData = students.map((student: Student) => {
-      const studentAttendance = attendance.filter(
-        (a) => a.studentId === student.id
-      );
+          const percentage =
+            counts.total > 0
+              ? Math.round(((counts.present + counts.late) / counts.total) * 100)
+              : 0;
 
-      const counts = {
-        total: studentAttendance.length,
-        present: studentAttendance.filter((a) => a.status === "present").length,
-        absent: studentAttendance.filter((a) => a.status === "absent").length,
-        late: studentAttendance.filter((a) => a.status === "late").length,
-        excused: studentAttendance.filter((a) => a.status === "excused").length,
-      };
+          return {
+            studentName: student.name,
+            rollNumber: student.rollNumber,
+            className: studentAttendance[0]?.className || "N/A",
+            ...counts,
+            percentage,
+          };
+        });
 
-      const percentage =
-        counts.total > 0
-          ? Math.round(((counts.present + counts.late) / counts.total) * 100)
-          : 0;
-
-      return {
-        studentName: student.name,
-        rollNumber: student.rollNumber,
-        className:
-          classesData.find((c) => c.id === student.classId)?.name || "N/A",
-        ...counts,
-        percentage,
-      };
-    });
-
-    setReports(reportData);
-  };
+        setReports(reportData);
+    }
+  }, [students, attendance, classes]);
 
   const getClassSummary = (classId: string) => {
-    const students = studentStorage.getByClass(classId);
-    const attendance = attendanceStorage.getByClass(classId);
+    const classAttendance = attendance.filter((a: any) => a.classId.toString() === classId.toString());
 
-    if (students.length === 0) return null;
+    if (classAttendance.length === 0) return null;
 
     const counts = {
-      present: attendance.filter((a) => a.status === "present").length,
-      absent: attendance.filter((a) => a.status === "absent").length,
-      late: attendance.filter((a) => a.status === "late").length,
-      excused: attendance.filter((a) => a.status === "excused").length,
-      total: attendance.length,
+      present: classAttendance.filter((a: any) => a.status === "PRESENT").length,
+      absent: classAttendance.filter((a: any) => a.status === "ABSENT").length,
+      late: classAttendance.filter((a: any) => a.status === "LATE").length,
+      excused: classAttendance.filter((a: any) => a.status === "EXCUSED").length,
+      total: classAttendance.length,
     };
 
     return counts;
   };
 
   const filteredReports = filterClassId
-    ? reports.filter((r) => r.className === classStorage.getById(filterClassId)?.name)
+    ? reports.filter((r) => {
+        const cls = classes.find((c: any) => c.id.toString() === filterClassId.toString());
+        return r.className === cls?.className;
+    })
     : reports;
 
   const overallStats = {
-    totalRecords: attendanceStorage.getAll().length,
-    totalStudents: studentStorage.getAll().length,
+    totalRecords: attendance.length,
+    totalStudents: students.length,
     totalClasses: classes.length,
   };
 
@@ -118,6 +112,10 @@ export function ReportContent() {
   const handlePrint = () => {
     window.print();
   };
+
+  if (isStudentsLoading || isAttendanceLoading || isClassesLoading) {
+    return <div>Loading reports...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -191,9 +189,9 @@ export function ReportContent() {
           className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           <option value="">All Classes</option>
-          {classes.map((cls) => (
+          {classes.map((cls: any) => (
             <option key={cls.id} value={cls.id}>
-              {cls.name}
+              {cls.className}
             </option>
           ))}
         </select>
@@ -204,7 +202,7 @@ export function ReportContent() {
         <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
           <div className="border-b border-gray-200 px-4 py-6 dark:border-gray-700 sm:px-6">
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              {classStorage.getById(filterClassId)?.name} - Summary
+              {classes.find((c: any) => c.id.toString() === filterClassId.toString())?.className} - Summary
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-5 sm:p-6">
