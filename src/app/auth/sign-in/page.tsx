@@ -30,6 +30,7 @@ export default function SignIn() {
                   alt="Logo"
                   width={176}
                   height={32}
+                  style={{ height: 'auto' }}
                 />
                 <Image
                   className="dark:hidden"
@@ -37,6 +38,7 @@ export default function SignIn() {
                   alt="Logo"
                   width={176}
                   height={32}
+                  style={{ height: 'auto' }}
                 />
               </Link>
               <p className="mb-3 text-xl font-medium text-dark dark:text-white">
@@ -59,6 +61,8 @@ export default function SignIn() {
                   width={405}
                   height={325}
                   className="mx-auto dark:opacity-30"
+                  style={{ height: 'auto' }}
+                  priority
                 />
               </div>
             </div>

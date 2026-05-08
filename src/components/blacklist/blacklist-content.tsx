@@ -118,7 +118,7 @@ export function BlacklistContent() {
               <option value="">Select a student</option>
               {availableStudents.map((student: any) => (
                 <option key={student.id} value={student.id}>
-                  {student.name} ({student.rollNumber})
+                  {student.name}
                 </option>
               ))}
             </select>

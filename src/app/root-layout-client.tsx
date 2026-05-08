@@ -13,7 +13,7 @@ export function RootLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -22,7 +22,30 @@ export function RootLayoutClient({
     if (!isLoading && !isAuthenticated && !pathname.startsWith("/auth")) {
       router.push("/auth/sign-in");
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+
+    // Role-based access control
+    if (!isLoading && isAuthenticated && user) {
+      const role = user.role;
+      
+      // Teacher restrictions
+      if (role === "teacher") {
+        const teacherRestrictedPaths = ["/dashboard", "/class", "/user", "/subject"];
+        const isRestricted = teacherRestrictedPaths.some(path => 
+          pathname === path || pathname.startsWith(path + "/")
+        );
+        
+        if (isRestricted) {
+          router.push("/attendance");
+        }
+      }
+      
+      // Prevent student access (should be blocked by backend but for safety)
+      if (role === "student") {
+        router.push("/auth/sign-in");
+        localStorage.clear(); // Clear local storage if student somehow logged in
+      }
+    }
+  }, [isAuthenticated, isLoading, router, pathname, user]);
 
   if (isLoading) {
     return (

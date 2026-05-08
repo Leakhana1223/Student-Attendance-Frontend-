@@ -1,26 +1,28 @@
 "use client";
 
 import React from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 interface Column<T> {
-  key: keyof T;
+  key: keyof T | string;
   label: string;
-  render?: (value: T[keyof T], row: T) => React.ReactNode;
+  render?: (value: any, row: T) => React.ReactNode;
 }
 
 interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   onDelete?: (row: T) => void;
+  onEdit?: (row: T) => void;
   isLoading?: boolean;
   emptyMessage?: string;
 }
 
-export function DataTable<T extends { id: string }>({
+export function DataTable<T extends { id: string | number }>({
   data,
   columns,
   onDelete,
+  onEdit,
   isLoading,
   emptyMessage = "No data found",
 }: DataTableProps<T>) {
@@ -38,6 +40,8 @@ export function DataTable<T extends { id: string }>({
     );
   }
 
+  const hasActions = onDelete || onEdit;
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -51,15 +55,15 @@ export function DataTable<T extends { id: string }>({
                 {column.label}
               </th>
             ))}
-            {onDelete && (
+            {hasActions && (
               <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
-                Action
+                Actions
               </th>
             )}
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => (
+          {data.map((row) => (
             <tr
               key={row.id}
               className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
@@ -67,19 +71,32 @@ export function DataTable<T extends { id: string }>({
               {columns.map((column) => (
                 <td key={String(column.key)} className="px-4 py-3">
                   {column.render
-                    ? column.render(row[column.key], row)
-                    : String(row[column.key])}
+                    ? column.render((row as any)[column.key], row)
+                    : String((row as any)[column.key] ?? "")}
                 </td>
               ))}
-              {onDelete && (
+              {hasActions && (
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => onDelete(row)}
-                    className="inline-flex items-center gap-2 rounded bg-red-50 px-2.5 py-1.5 text-sm text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(row)}
+                        className="inline-flex items-center gap-1.5 rounded bg-blue-50 px-2.5 py-1.5 text-sm text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(row)}
+                        className="inline-flex items-center gap-1.5 rounded bg-red-50 px-2.5 py-1.5 text-sm text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               )}
             </tr>

@@ -8,7 +8,6 @@ import { useGetClassesQuery } from "@/redux/features/class/classApi";
 
 interface ReportData {
   studentName: string;
-  rollNumber: string;
   className: string;
   total: number;
   present: number;
@@ -48,7 +47,6 @@ export function ReportContent() {
 
           return {
             studentName: student.name,
-            rollNumber: student.rollNumber,
             className: studentAttendance[0]?.className || "N/A",
             ...counts,
             percentage,
@@ -91,11 +89,11 @@ export function ReportContent() {
   const handleExportCSV = () => {
     if (filteredReports.length === 0) return;
     
-    const headers = ["Student Name", "Roll Number", "Class", "Present", "Absent", "Late", "Excused", "Percentage"];
+    const headers = ["Student Name", "Class", "Present", "Absent", "Late", "Excused", "Percentage"];
     const csvContent = [
       headers.join(","),
       ...filteredReports.map(r => 
-        `"${r.studentName}","${r.rollNumber}","${r.className}",${r.present},${r.absent},${r.late},${r.excused},"${r.percentage}%"`
+        `"${r.studentName}","${r.className}",${r.present},${r.absent},${r.late},${r.excused},"${r.percentage}%"`
       )
     ].join("\n");
 
@@ -275,9 +273,6 @@ export function ReportContent() {
                     Student Name
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
-                    Roll Number
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
                     Class
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
@@ -305,9 +300,6 @@ export function ReportContent() {
                   >
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                       {report.studentName}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      {report.rollNumber}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {report.className}

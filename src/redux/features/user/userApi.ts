@@ -10,6 +10,10 @@ export const userApi = api.injectEndpoints({
       query: (id) => `/users/${id}`,
       providesTags: (result, error, id) => [{ type: 'User', id }],
     }),
+    getTeachers: builder.query<any[], void>({
+      query: () => '/users/role/TEACHER',
+      providesTags: ['User'],
+    }),
     addUser: builder.mutation({
       query: (user) => ({
         url: '/users',
@@ -39,6 +43,7 @@ export const userApi = api.injectEndpoints({
 export const {
   useGetUsersQuery,
   useGetUserByIdQuery,
+  useGetTeachersQuery,
   useAddUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,

@@ -21,16 +21,14 @@ export function StudentContent() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    rollNumber: "",
     classId: "",
     dateOfBirth: new Date().toISOString().split("T")[0],
-    address: "",
   });
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.rollNumber || !formData.classId) {
+    if (!formData.name || !formData.email || !formData.classId) {
       alert("Please fill all fields");
       return;
     }
@@ -39,10 +37,8 @@ export function StudentContent() {
       await addStudent({
         name: formData.name,
         email: formData.email,
-        rollNumber: formData.rollNumber,
         classId: formData.classId,
         dateOfBirth: formData.dateOfBirth,
-        address: formData.address,
         password: "Student@123", // Default password
         gender: "MALE", // Default gender, should ideally be in form
         phoneNumber: "",
@@ -51,10 +47,8 @@ export function StudentContent() {
       setFormData({
         name: "",
         email: "",
-        rollNumber: "",
         classId: "",
         dateOfBirth: new Date().toISOString().split("T")[0],
-        address: "",
       });
       setIsModalOpen(false);
     } catch (error) {
@@ -138,14 +132,13 @@ export function StudentContent() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-              Roll Number
+              Date of Birth
             </label>
             <input
-              type="text"
-              value={formData.rollNumber}
-              onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="STU001"
               required
             />
           </div>
@@ -161,39 +154,12 @@ export function StudentContent() {
               required
             >
               <option value="">Select a class</option>
-              {classes.map((cls) => (
+              {classes.map((cls: any) => (
                 <option key={cls.id} value={cls.id}>
                   {cls.className}
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-              Date of Birth
-            </label>
-            <input
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-              Address
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="123 Main St"
-              required
-            />
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -227,15 +193,12 @@ export function StudentContent() {
             columns={[
               { key: "name", label: "Name" },
               { key: "email", label: "Email" },
-              { key: "rollNumber", label: "Roll Number" },
               {
                 key: "classId",
                 label: "Class",
-                render: (_, item) => {
-                    // This is a bit tricky because the backend might not return classId directly in UserResponse
-                    // We might need to fetch enrollments or have the backend include it.
-                    // For now, let's assume we can't show it easily without extra API call or join.
-                    return "View Enrollment"; 
+                render: (classId) => {
+                    const cls = classes.find((c: any) => c.id.toString() === classId?.toString());
+                    return cls ? cls.className : "N/A";
                 },
               },
               {
@@ -243,7 +206,6 @@ export function StudentContent() {
                 label: "Date of Birth",
                 render: (date) => date ? new Date(date as string).toLocaleDateString() : "N/A",
               },
-              { key: "address", label: "Address" },
             ]}
             onDelete={handleDelete}
             emptyMessage="No students found. Add one to get started!"
