@@ -7,7 +7,7 @@ export const studentApi = api.injectEndpoints({
       providesTags: ['Student'],
     }),
     getStudentById: builder.query<any, string>({
-      query: (id) => `/users/${id}`,
+      query: (id) => `/students/${id}`,
       providesTags: (result, error, id) => [{ type: 'Student', id }],
     }),
     addStudent: builder.mutation({

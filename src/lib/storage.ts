@@ -24,7 +24,7 @@ export interface Attendance {
   classId: string;
   date: string;
   session: "morning" | "afternoon";
-  status: "present" | "absent" | "late" | "excused";
+  status: "present" | "absent" | "late";
   remark?: string;
 }
 

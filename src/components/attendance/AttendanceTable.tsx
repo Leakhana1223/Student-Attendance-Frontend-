@@ -4,7 +4,11 @@ import React, { useState, useMemo } from "react";
 import { useAuth } from "@/context/auth-context";
 import { AttendanceToolbar } from "./AttendanceToolbar";
 import { AttendanceRow } from "./AttendanceRow";
-import { useGetAttendanceQuery, useRecordAttendanceMutation } from "@/redux/features/attendance/attendanceApi";
+import {
+  useGetAttendanceQuery,
+  useRecordAttendanceMutation,
+  useDeleteAttendanceMutation,
+} from "@/redux/features/attendance/attendanceApi";
 import { useGetStudentsQuery } from "@/redux/features/student/studentApi";
 import { useGetClassesQuery } from "@/redux/features/class/classApi";
 import { Modal } from "@/components/Modal";
@@ -17,17 +21,25 @@ export interface StudentAttendance {
   name: string;
   // Key represents the day of the month (1-31), value is the status
   attendance: Record<number, AttendanceStatus>;
+  // Track attendance record IDs for deletion: key is day number
+  recordIds: Record<number, number>;
 }
 
 export function AttendanceTable() {
   const [mounted, setMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedClassId, setSelectedClassId] = useState<string>("");
-  
+
   // State for the cell update modal
-  const [selectedCell, setSelectedCell] = useState<{ studentId: string, studentName: string, day: number, currentStatus: AttendanceStatus } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    studentId: string;
+    studentName: string;
+    day: number;
+    currentStatus: AttendanceStatus;
+    existingRecordId?: number;
+  } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  
+
   // Local overrides for optimistic UI updates: key is "studentId-day"
   const [localOverrides, setLocalOverrides] = useState<Record<string, AttendanceStatus>>({});
 
@@ -38,14 +50,26 @@ export function AttendanceTable() {
   const { user } = useAuth();
   const { data: allAttendance = [], isLoading: isAttendanceLoading } = useGetAttendanceQuery();
   const [recordAttendance] = useRecordAttendanceMutation();
+  const [deleteAttendance] = useDeleteAttendanceMutation();
   const { data: allStudents = [], isLoading: isStudentsLoading } = useGetStudentsQuery();
   const { data: classes = [], isLoading: isClassesLoading } = useGetClassesQuery();
 
-  React.useEffect(() => {
-    if (classes.length > 0 && !selectedClassId) {
-      setSelectedClassId(classes[0].id.toString());
+  const filteredClasses = useMemo(() => {
+    if (!user) return [];
+    if (user.role === "admin") return classes;
+    if (user.role === "teacher") {
+      return classes.filter((cls: any) =>
+        cls.teachers?.some((t: any) => t.id.toString() === user.id.toString())
+      );
     }
-  }, [classes, selectedClassId]);
+    return [];
+  }, [classes, user]);
+
+  React.useEffect(() => {
+    if (filteredClasses.length > 0 && !selectedClassId) {
+      setSelectedClassId(filteredClasses[0].id.toString());
+    }
+  }, [filteredClasses, selectedClassId]);
 
   const isLoading = isAttendanceLoading || isStudentsLoading || isClassesLoading;
 
@@ -70,7 +94,6 @@ export function AttendanceTable() {
       case "PRESENT": return "Present";
       case "ABSENT": return "Absent";
       case "LATE": return "Late";
-      case "EXCUSED":
       case "PERMISSION": return "Permission";
       default: return "None";
     }
@@ -78,7 +101,7 @@ export function AttendanceTable() {
 
   const handleUpdateStatus = async (status: AttendanceStatus) => {
     if (!selectedCell) return;
-    
+
     // Validation: Cannot update future attendance
     const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedCell.day);
     const today = new Date();
@@ -92,7 +115,7 @@ export function AttendanceTable() {
     // Ensure we have a classId
     const student = allStudents.find((s: any) => s.id.toString() === selectedCell.studentId.toString());
     const classId = selectedClassId || student?.classId;
-    
+
     if (!classId) {
       alert("Please select a class to record attendance.");
       setSelectedCell(null);
@@ -100,40 +123,49 @@ export function AttendanceTable() {
     }
 
     setIsUpdating(true);
-    
+
     // Optimistic Update
     const overrideKey = `${selectedCell.studentId}-${selectedCell.day}`;
     setLocalOverrides(prev => ({ ...prev, [overrideKey]: status }));
-    
-    try {
-      let apiStatus = "PRESENT";
-      if (status === "Absent") apiStatus = "ABSENT";
-      if (status === "Late") apiStatus = "LATE";
-      if (status === "Permission") apiStatus = "EXCUSED";
 
-      const year = currentDate.getFullYear();
-      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-      const day = selectedCell.day.toString().padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
-      
-      await recordAttendance({
-        studentId: Number(selectedCell.studentId),
-        classId: Number(classId),
-        date: dateString,
-        status: apiStatus,
-        timeSlot: "08:00 - 10:00", // Default time slot
-        recordedById: user?.id ? Number(user.id) : null,
-        remark: ""
-      }).unwrap();
-    } catch (err) {
+    try {
+      // "None" / Clear Status: delete the existing record if it exists
+      if (status === "None") {
+        if (selectedCell.existingRecordId) {
+          await deleteAttendance(selectedCell.existingRecordId).unwrap();
+        }
+        // If no existing record, nothing to do
+      } else {
+        let apiStatus = "PRESENT";
+        if (status === "Absent") apiStatus = "ABSENT";
+        else if (status === "Late") apiStatus = "LATE";
+        else if (status === "Permission") apiStatus = "PERMISSION";
+
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, "0");
+        const day = selectedCell.day.toString().padStart(2, "0");
+        const dateString = `${year}-${month}-${day}`;
+
+        await recordAttendance({
+          studentId: Number(selectedCell.studentId),
+          classId: Number(classId),
+          date: dateString,
+          status: apiStatus,
+          timeSlot: "08:00 - 10:00", // Default time slot
+          recordedById: user?.id ? Number(user.id) : null,
+          remark: "",
+        }).unwrap();
+      }
+    } catch (err: any) {
       console.error("Failed to update attendance:", err);
-      // Revert on failure
+      const errorMessage = err?.data?.message || err?.message || "Unknown error";
+      // Revert optimistic update on failure
       setLocalOverrides(prev => {
         const next = { ...prev };
         delete next[overrideKey];
         return next;
       });
-      alert("Failed to update attendance. Please try again.");
+      alert(`Failed to update attendance: ${errorMessage}`);
     } finally {
       setIsUpdating(false);
       setSelectedCell(null);
@@ -142,37 +174,49 @@ export function AttendanceTable() {
 
   const students = useMemo(() => {
     if (isLoading) return [];
-    
+
     // Filter students by class if a class is selected
-    const filteredStudents = selectedClassId 
+    const filteredStudents = selectedClassId
       ? allStudents.filter((s: any) => s.classId?.toString() === selectedClassId.toString())
       : allStudents;
 
-    const currentYearStr = currentDate.getFullYear().toString();
-    const currentMonthStr = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-
     return filteredStudents.map((student: any) => {
       const attendanceRecord: Record<number, AttendanceStatus> = {};
-      
+      const recordIds: Record<number, number> = {};
+
       // Filter attendance records for this student and this month/year
-      const studentRecords = allAttendance.filter((record: any) => {
-        if (record.studentId?.toString() !== student.id?.toString()) return false;
-        
-        const dateStr = record.date || record.sessionDate;
-        if (!dateStr) return false;
-        
-        const [y, m] = dateStr.split('-').map(Number);
-        return (
-          y === currentDate.getFullYear() &&
-          (m - 1) === currentDate.getMonth()
-        );
-      });
+      const studentRecords = Array.isArray(allAttendance)
+        ? allAttendance.filter((record: any) => {
+            if (!record || record.studentId?.toString() !== student.id?.toString()) return false;
+
+            // Use sessionDate (field from AttendanceResponse DTO)
+            const dateStr = record.sessionDate;
+            if (!dateStr || typeof dateStr !== "string") return false;
+
+            const parts = dateStr.split("-");
+            if (parts.length < 3) return false;
+
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+
+            return (
+              y === currentDate.getFullYear() &&
+              m - 1 === currentDate.getMonth()
+            );
+          })
+        : [];
 
       studentRecords.forEach((record: any) => {
-        const dateStr = record.date || record.sessionDate;
-        const [y, m, d] = dateStr.split('-').map(Number);
-        // If there are multiple records for a day (e.g., Morning/Afternoon), this simple mapping takes the last one.
-        attendanceRecord[d] = mapStatus(record.status);
+        const dateStr = record.sessionDate;
+        const parts = dateStr.split("-");
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(d)) {
+          attendanceRecord[d] = mapStatus(record.status);
+          // Store the attendance record ID for deletion support
+          if (record.id) {
+            recordIds[d] = record.id;
+          }
+        }
       });
 
       // Apply optimistic overrides
@@ -187,6 +231,7 @@ export function AttendanceTable() {
         id: student.id,
         name: student.name,
         attendance: attendanceRecord,
+        recordIds,
       };
     });
   }, [allStudents, allAttendance, selectedClassId, currentDate, isLoading, localOverrides, daysInMonth]);
@@ -201,6 +246,43 @@ export function AttendanceTable() {
     );
   }
 
+  const handleExportCSV = () => {
+    if (!students || students.length === 0) {
+      alert("No data to export.");
+      return;
+    }
+
+    // Header row
+    const headers = ["Student Name", ...days.map(d => `${d} ${currentDate.toLocaleString("default", { month: "short" })}`)];
+    
+    // Data rows
+    const rows = students.map((student: any) => {
+      const row = [student.name];
+      days.forEach(d => {
+        const status = student.attendance[d];
+        row.push(!status || status === "None" ? "-" : status);
+      });
+      return row;
+    });
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.setAttribute("href", URL.createObjectURL(blob));
+    const selectedClassObj = classes.find((c: any) => c.id.toString() === selectedClassId?.toString());
+    const className = selectedClassObj ? selectedClassObj.className : "all_classes";
+    const monthYear = `${currentDate.toLocaleString("default", { month: "short" })}_${currentDate.getFullYear()}`;
+    link.setAttribute("download", `attendance_${className.replace(/\s+/g, "_")}_${monthYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="rounded-2xl border border-stroke bg-white p-4 shadow-sm dark:border-strokedark dark:bg-boxdark sm:p-6 lg:p-8">
       {/* Status Update Modal */}
@@ -214,14 +296,14 @@ export function AttendanceTable() {
           <div className="space-y-4">
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
               <p>Student: <span className="font-semibold text-black dark:text-white">{selectedCell.studentName}</span></p>
-              <p>Date: <span className="font-semibold text-black dark:text-white">{getDayOfWeek(selectedCell.day)}, {selectedCell.day} {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span></p>
+              <p>Date: <span className="font-semibold text-black dark:text-white">{getDayOfWeek(selectedCell.day)}, {selectedCell.day} {currentDate.toLocaleString("default", { month: "long", year: "numeric" })}</span></p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleUpdateStatus("Present")}
                 disabled={isUpdating}
-                className="flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-100 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:opacity-50 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
               >
                 <Check size={18} />
                 Present
@@ -229,7 +311,7 @@ export function AttendanceTable() {
               <button
                 onClick={() => handleUpdateStatus("Absent")}
                 disabled={isUpdating}
-                className="flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
               >
                 <X size={18} />
                 Absent
@@ -237,7 +319,7 @@ export function AttendanceTable() {
               <button
                 onClick={() => handleUpdateStatus("Permission")}
                 disabled={isUpdating}
-                className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-orange-200 bg-orange-50 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 disabled:opacity-50 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50"
               >
                 <FileText size={18} />
                 Permission
@@ -245,17 +327,17 @@ export function AttendanceTable() {
               <button
                 onClick={() => handleUpdateStatus("Late")}
                 disabled={isUpdating}
-                className="flex items-center justify-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 py-3 text-sm font-semibold text-yellow-700 transition hover:bg-yellow-100 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 py-3 text-sm font-semibold text-yellow-700 transition hover:bg-yellow-100 disabled:opacity-50 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
               >
                 <Clock size={18} />
                 Late
               </button>
               <button
                 onClick={() => handleUpdateStatus("None")}
-                disabled={isUpdating}
-                className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400 dark:hover:bg-gray-800"
+                disabled={isUpdating || !selectedCell.existingRecordId}
+                className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400 dark:hover:bg-gray-800"
               >
-                Clear Status
+                {isUpdating ? "Updating..." : "Clear Status (Delete Record)"}
               </button>
             </div>
           </div>
@@ -266,24 +348,29 @@ export function AttendanceTable() {
       <AttendanceToolbar
         currentMonth={currentDate}
         onMonthChange={setCurrentDate}
-        onExport={() => alert("Export functionality would go here.")}
+        onExport={handleExportCSV}
       />
 
       {/* Class Selector and Legend */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-black dark:text-white">Class:</label>
-          <select
-          value={selectedClassId}
-          onChange={(e) => setSelectedClassId(e.target.value)}
-          className="rounded-lg border border-stroke bg-transparent px-4 py-2 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4"
-          >
-          {classes.map((cls: any) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.className}
-            </option>
-          ))}
-          </select>        </div>
+          {filteredClasses.length === 0 ? (
+            <span className="text-sm text-gray-500">No classes assigned</span>
+          ) : (
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="rounded-lg border border-stroke bg-transparent px-4 py-2 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4"
+            >
+              {filteredClasses.map((cls: any) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.className}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-1.5">
@@ -299,7 +386,7 @@ export function AttendanceTable() {
             <span className="text-gray-600 dark:text-gray-300">Late</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-blue-100 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-800"></div>
+            <div className="h-4 w-4 rounded bg-orange-100 border border-orange-200 dark:bg-orange-900/30 dark:border-orange-800"></div>
             <span className="text-gray-600 dark:text-gray-300">Permission</span>
           </div>
         </div>
@@ -318,7 +405,7 @@ export function AttendanceTable() {
               <th className="sticky left-[52px] top-0 z-20 min-w-[200px] bg-gray-50 px-4 py-3 text-sm font-semibold text-black dark:bg-meta-4 dark:text-white whitespace-nowrap border-b border-r border-stroke dark:border-strokedark shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                 Student Name
               </th>
-              
+
               {/* Dynamic Day Headers */}
               {days.map((day) => (
                 <th key={day} className="min-w-[48px] px-1 py-2 border-b border-stroke dark:border-strokedark">
@@ -363,11 +450,13 @@ export function AttendanceTable() {
                   currentYear={currentDate.getFullYear()}
                   currentMonth={currentDate.getMonth()}
                   onCellClick={(id, day, status) => {
+                    const existingRecordId = student.recordIds?.[day];
                     setSelectedCell({
                       studentId: id,
                       studentName: student.name,
                       day,
-                      currentStatus: status
+                      currentStatus: status,
+                      existingRecordId,
                     });
                   }}
                 />
@@ -376,7 +465,9 @@ export function AttendanceTable() {
               // Empty State
               <tr>
                 <td colSpan={daysInMonth + 2} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                  No students or records found for this selection.
+                  {filteredClasses.length === 0
+                    ? "No classes assigned to your account."
+                    : "No students or records found for this selection."}
                 </td>
               </tr>
             )}

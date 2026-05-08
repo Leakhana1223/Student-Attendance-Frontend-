@@ -50,7 +50,7 @@ export const NAV_DATA: NavSection[] = [
         url: "/blacklist",
         icon: Icons.Blacklist,
         items: [],
-        allowedRoles: ["admin", "teacher"],
+        allowedRoles: ["admin"],
       },
       {
         title: "Users",
@@ -65,13 +65,6 @@ export const NAV_DATA: NavSection[] = [
         icon: Icons.Reports,
         items: [],
         allowedRoles: ["admin", "teacher"],
-      },
-      {
-        title: "Subjects",
-        url: "/subject",
-        icon: Icons.Class,
-        items: [],
-        allowedRoles: ["admin"],
       },
     ],
   }

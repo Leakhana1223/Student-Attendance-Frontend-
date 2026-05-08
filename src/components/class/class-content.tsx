@@ -93,7 +93,7 @@ function TeacherPicker({ teachers, selectedIds, onChange }: TeacherPickerProps) 
       <div
         role="button"
         onClick={() => setOpen((o) => !o)}
-        className="min-h-[42px] w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-800"
+        className="min-h-[42px] w-full cursor-pointer rounded-lg border border-stroke px-3 py-2 dark:border-strokedark dark:bg-boxdark dark:text-white"
       >
         {selectedTeachers.length === 0 ? (
           <span className="text-gray-400 dark:text-gray-500">Select teachers…</span>
@@ -123,10 +123,10 @@ function TeacherPicker({ teachers, selectedIds, onChange }: TeacherPickerProps) 
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-dark">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-stroke bg-white shadow-lg dark:border-strokedark dark:bg-boxdark">
           {/* Search */}
-          <div className="border-b border-gray-200 p-2 dark:border-gray-700">
-            <div className="flex items-center gap-2 rounded-md border border-gray-200 px-2 py-1 dark:border-gray-600">
+          <div className="border-b border-stroke p-2 dark:border-strokedark">
+            <div className="flex items-center gap-2 rounded-md border border-stroke px-2 py-1 dark:border-strokedark">
               <Search className="h-4 w-4 text-gray-400" />
               <input
                 autoFocus
@@ -149,7 +149,7 @@ function TeacherPicker({ teachers, selectedIds, onChange }: TeacherPickerProps) 
                   <li
                     key={t.id}
                     onClick={() => toggle(t.id)}
-                    className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                    className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-meta-4/50 ${
                       checked ? "bg-primary/5" : ""
                     }`}
                   >
@@ -157,7 +157,7 @@ function TeacherPicker({ teachers, selectedIds, onChange }: TeacherPickerProps) 
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                         checked
                           ? "border-primary bg-primary text-white"
-                          : "border-gray-300 dark:border-gray-600"
+                          : "border-stroke dark:border-strokedark"
                       }`}
                     >
                       {checked && (
@@ -424,11 +424,12 @@ export function ClassContent() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-black dark:text-white">
             Classes Management
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -473,11 +474,11 @@ export function ClassContent() {
       </Modal>
 
       {/* Table Card */}
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-5 dark:border-gray-700 sm:px-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+      <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+        <div className="flex items-center justify-between border-b border-stroke px-4 py-5 dark:border-strokedark sm:px-6">
+          <h3 className="font-semibold text-black dark:text-white">
             All Classes
-            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-meta-4 dark:text-gray-300">
               {classes.length}
             </span>
           </h3>
@@ -492,6 +493,7 @@ export function ClassContent() {
             emptyMessage="No classes found. Create one to get started!"
           />
         </div>
+      </div>
       </div>
     </div>
   );

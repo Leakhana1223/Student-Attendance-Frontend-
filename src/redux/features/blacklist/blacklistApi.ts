@@ -2,8 +2,24 @@ import { api } from '../../api';
 
 export const blacklistApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getBlacklist: builder.query<any[], void>({
-      query: () => '/blacklist',
+    getBlacklist: builder.query<any[], { months?: number; classId?: string } | void>({
+      query: (params) => {
+        const { months, classId } = params || {};
+        let url = '/blacklist?';
+        if (months) url += `months=${months}&`;
+        if (classId && classId !== 'all') url += `classId=${classId}&`;
+        return url;
+      },
+      providesTags: ['Blacklist'],
+    }),
+    getBlacklistHistory: builder.query<any[], { months?: number; classId?: string } | void>({
+      query: (params) => {
+        const { months, classId } = params || {};
+        let url = '/blacklist/history?';
+        if (months) url += `months=${months}&`;
+        if (classId && classId !== 'all') url += `classId=${classId}&`;
+        return url;
+      },
       providesTags: ['Blacklist'],
     }),
     addToBlacklist: builder.mutation({
@@ -30,6 +46,7 @@ export const blacklistApi = api.injectEndpoints({
 
 export const {
   useGetBlacklistQuery,
+  useGetBlacklistHistoryQuery,
   useAddToBlacklistMutation,
   useRemoveFromBlacklistMutation,
   useCheckBlacklistQuery,

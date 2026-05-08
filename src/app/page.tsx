@@ -1,13 +1,27 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 
 export default function RootPage() {
   const router = useRouter();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    router.push("/dashboard");
-  }, [router]);
+    if (!isLoading) {
+      if (isAuthenticated && user) {
+        if (user.role === "admin") {
+          router.push("/dashboard");
+        } else if (user.role === "teacher") {
+          router.push("/student");
+        } else {
+          router.push("/student");
+        }
+      } else {
+        router.push("/auth/sign-in");
+      }
+    }
+  }, [router, user, isLoading, isAuthenticated]);
 
   return (
     <div className="flex h-screen items-center justify-center bg-gray-50">

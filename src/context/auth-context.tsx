@@ -8,6 +8,7 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  classId?: string;
 }
 
 interface AuthContextType {
@@ -45,8 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData: User = {
         id: response.id.toString(),
         email: response.email,
-        name: response.username,
+        name: response.name,
         role: response.roles[0]?.replace('ROLE_', '').toLowerCase() || 'user',
+        classId: response.classId?.toString(),
       };
 
       setUser(userData);

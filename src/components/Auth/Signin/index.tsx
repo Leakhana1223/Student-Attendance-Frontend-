@@ -19,12 +19,12 @@ export default function Signin() {
         <SigninWithPassword />
       </div>
 
-      <div className="mt-6 text-center">
+      <div className="mt-6 text-center text-dark-4 dark:text-dark-6">
         <p>
-          Don’t have any account?{" "}
-          <Link href="/auth/sign-up" className="text-primary">
-            Sign Up
-          </Link>
+          Don’t have an account?{" "}
+          <span className="text-primary font-medium">
+            Contact your Administrator
+          </span>
         </p>
       </div>
     </>

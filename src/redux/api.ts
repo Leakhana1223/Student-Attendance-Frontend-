@@ -18,8 +18,8 @@ const baseQueryWithReauth: BaseQueryFn<
 > = async (args, api, extraOptions) => {
   let result = await baseQuery(args, api, extraOptions);
 
+  // Handle 401 — attempt token refresh
   if (result.error && result.error.status === 401) {
-    // try to get a new token
     const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
     if (refreshToken) {
       const refreshResult = await baseQuery(
@@ -33,14 +33,12 @@ const baseQueryWithReauth: BaseQueryFn<
       );
 
       if (refreshResult.data) {
-        // store the new token
-        const { accessToken } = refreshResult.data as { accessToken: string };
-        localStorage.setItem('token', accessToken);
-
-        // retry the initial query
+        const { token } = refreshResult.data as { token: string };
+        localStorage.setItem('token', token);
+        // Retry original query with new token
         result = await baseQuery(args, api, extraOptions);
       } else {
-        // refresh failed - logout the user
+        // Refresh failed — log out user
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -54,6 +52,19 @@ const baseQueryWithReauth: BaseQueryFn<
       }
     }
   }
+
+  // For network-level errors on GET requests only: return empty array to prevent crash
+  // Mutations (POST/PUT/PATCH/DELETE) must propagate errors so UI can show feedback
+  if (result.error && result.error.status === 'FETCH_ERROR') {
+    const method = typeof args === 'string' ? 'GET' : (args.method?.toUpperCase() || 'GET');
+    if (method === 'GET') {
+      console.warn('Network error on GET request, returning empty array:', args);
+      return { data: [] };
+    }
+    // Let mutation errors propagate naturally
+    console.error('Network error on mutation:', args, result.error);
+  }
+
   return result;
 };
 
@@ -61,6 +72,6 @@ const baseQueryWithReauth: BaseQueryFn<
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['User', 'Student', 'Class', 'Attendance', 'Subject', 'Blacklist'],
+  tagTypes: ['User', 'Student', 'Class', 'Attendance', 'Subject', 'Blacklist', 'Report'],
   endpoints: () => ({}), // Endpoints are injected from the feature API slices
 });

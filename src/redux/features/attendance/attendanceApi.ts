@@ -16,14 +16,14 @@ export const attendanceApi = api.injectEndpoints({
         method: 'POST',
         body: attendance,
       }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'Blacklist', 'Student'],
     }),
     deleteAttendance: builder.mutation({
       query: (id) => ({
         url: `/attendance/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'Blacklist', 'Student'],
     }),
   }),
 });

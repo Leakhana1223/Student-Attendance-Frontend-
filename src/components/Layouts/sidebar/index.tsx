@@ -14,18 +14,22 @@ import { useMemo } from "react";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { setIsOpen, isOpen, isMobile, toggleSidebar } = useSidebarContext();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const filteredNavData = useMemo(() => {
+    // While auth is loading, show all items to prevent sidebar flash
+    if (isLoading || !user) {
+      return NAV_DATA.filter(section => section.items.length > 0);
+    }
     return NAV_DATA.map(section => ({
       ...section,
-      items: section.items.filter(item => 
-        !item.allowedRoles || (user?.role && item.allowedRoles.includes(user.role))
+      items: section.items.filter(item =>
+        !item.allowedRoles || item.allowedRoles.includes(user.role)
       )
     })).filter(section => section.items.length > 0);
-  }, [user?.role]);
+  }, [user, isLoading]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) => (prev.includes(title) ? [] : [title]));

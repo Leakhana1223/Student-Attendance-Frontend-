@@ -18,6 +18,15 @@ export function RootLayoutClient({
   const pathname = usePathname();
 
   useEffect(() => {
+    // Redirect authenticated users away from auth pages
+    if (!isLoading && isAuthenticated && pathname.startsWith("/auth")) {
+      if (user?.role === "teacher") {
+        router.push("/attendance");
+      } else {
+        router.push("/dashboard");
+      }
+    }
+
     // Allow access to auth/sign-in page without authentication
     if (!isLoading && !isAuthenticated && !pathname.startsWith("/auth")) {
       router.push("/auth/sign-in");
@@ -31,7 +40,7 @@ export function RootLayoutClient({
       if (role === "teacher") {
         const teacherRestrictedPaths = ["/dashboard", "/class", "/user", "/subject"];
         const isRestricted = teacherRestrictedPaths.some(path => 
-          pathname === path || pathname.startsWith(path + "/")
+          pathname === "/" || pathname === path || pathname.startsWith(path + "/")
         );
         
         if (isRestricted) {

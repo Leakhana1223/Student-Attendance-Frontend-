@@ -40,10 +40,20 @@ export default function SigninWithPassword() {
 
     try {
       await login(data.email, data.password);
-      // Redirect to dashboard
-      router.push("/dashboard");
+      // Redirect to root which handles role-based redirection
+      router.push("/");
     } catch (err: any) {
-      setError(err?.data?.message || "Login failed. Please check your credentials.");
+      console.error("Login component error:", err);
+      
+      if (err.status === 'FETCH_ERROR') {
+        setError("Cannot connect to the server. Please ensure the backend is running on port 8081.");
+      } else if (err.status === 401) {
+        setError("Invalid email or password.");
+      } else if (err.status === 403) {
+        setError(err.data?.message || "You do not have permission to access this system.");
+      } else {
+        setError(err.data?.message || "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

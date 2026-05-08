@@ -24,7 +24,7 @@ export function AttendanceCell({ status, day, onClick, disabled }: AttendanceCel
       case "Late":
         return "bg-yellow-100 text-yellow-600 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50 border-yellow-200 dark:border-yellow-800";
       case "Permission":
-        return "bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800";
+        return "bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 border-orange-200 dark:border-orange-800";
       default:
         return "bg-gray-50 text-gray-400 hover:bg-gray-100 dark:bg-gray-800/50 dark:text-gray-500 dark:hover:bg-gray-800 border-gray-100 dark:border-gray-700";
     }

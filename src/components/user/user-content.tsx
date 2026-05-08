@@ -68,14 +68,21 @@ export function UserContent() {
   };
 
   if (isLoading) {
-    return <div>Loading users...</div>;
+    return (
+      <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-black dark:text-white">
           Users Management
         </h2>
         <button
@@ -89,34 +96,26 @@ export function UserContent() {
 
       {/* Current User Info */}
       {currentUser && (
-        <div className="rounded-[10px] bg-blue-50 shadow-1 dark:bg-blue-900/20 dark:shadow-card">
-          <div className="px-4 py-6 sm:px-6">
-            <h3 className="mb-4 font-semibold text-blue-900 dark:text-blue-400">
-              Your Profile
-            </h3>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div>
-                <p className="text-sm text-blue-800 dark:text-blue-300">Name</p>
-                <p className="mt-1 font-medium text-blue-900 dark:text-blue-200">
-                  {currentUser.name}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-800 dark:text-blue-300">Email</p>
-                <p className="mt-1 font-medium text-blue-900 dark:text-blue-200">
-                  {currentUser.email}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-800 dark:text-blue-300">Role</p>
-                <p className="mt-1 font-medium text-blue-900 dark:text-blue-200 capitalize">
-                  {currentUser.role}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-800 dark:text-blue-300">Status</p>
-                <p className="mt-1 font-medium text-green-600">Active</p>
-              </div>
+        <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+          <div className="border-b border-stroke px-4 py-4 dark:border-strokedark sm:px-6">
+            <h3 className="font-semibold text-black dark:text-white">Your Profile</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-4 sm:p-6">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Name</p>
+              <p className="mt-1 font-medium text-black dark:text-white">{currentUser.name}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+              <p className="mt-1 font-medium text-black dark:text-white">{currentUser.email}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Role</p>
+              <p className="mt-1 font-medium capitalize text-black dark:text-white">{currentUser.role}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+              <span className="mt-1 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">Active</span>
             </div>
           </div>
         </div>
@@ -204,10 +203,13 @@ export function UserContent() {
       </Modal>
 
       {/* Users Table */}
-      <div className="rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-        <div className="border-b border-gray-200 px-4 py-6 dark:border-gray-700 sm:px-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
-            All Users ({users.length})
+      <div className="rounded-2xl border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-boxdark">
+        <div className="border-b border-stroke px-4 py-5 dark:border-strokedark sm:px-6">
+          <h3 className="font-semibold text-black dark:text-white">
+            All Users
+            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-meta-4 dark:text-gray-300">
+              {users.length}
+            </span>
           </h3>
         </div>
         <div className="p-4 sm:p-6">
@@ -216,16 +218,22 @@ export function UserContent() {
             columns={[
               { key: "name", label: "Name" },
               { key: "email", label: "Email" },
-              { key: "role", label: "Role" },
               {
-                key: "id", // Using ID since backend might not have createdAt easily available without audit fields
-                label: "ID",
+                key: "role",
+                label: "Role",
+                render: (role) => (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium capitalize text-primary">
+                    {role?.toLowerCase()}
+                  </span>
+                ),
               },
+              { key: "id", label: "ID" },
             ]}
             onDelete={handleDelete}
             emptyMessage="No users found. Add one to get started!"
           />
         </div>
+      </div>
       </div>
     </div>
   );

@@ -39,7 +39,7 @@ Your Student Attendance System has been transformed into a **complete, productio
 #### Attendance Tracking (`/attendance`)
 - Mark attendance for students
 - Filter by class and date
-- Track attendance status (Present, Absent, Late, Excused)
+- Track attendance status (Present, Absent, Late)
 - Add remarks for each record
 - Support for multiple sessions (Morning/Afternoon)
 - Fields: Student ID, Class ID, Date, Session, Status, Remark
@@ -49,7 +49,7 @@ Your Student Attendance System has been transformed into a **complete, productio
 - Class-wise breakdown
 - Student-wise attendance percentage
 - Filter by class
-- Summary cards showing Present/Absent/Late/Excused counts
+- Summary cards showing Present/Absent/Late counts
 
 #### Subjects Management (`/subject`)
 - Add subjects to classes

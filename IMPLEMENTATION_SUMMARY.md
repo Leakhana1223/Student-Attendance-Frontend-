@@ -127,7 +127,7 @@ All data is stored in browser localStorage with these keys:
 ### ✅ Attendance Management
 - Track attendance by student, class, and date
 - Support for multiple sessions (Morning/Afternoon)
-- Status tracking: Present, Absent, Late, Excused
+- Status tracking: Present, Absent, Late
 - Add remarks for each record
 - Filter and search functionality
 
